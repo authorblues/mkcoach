@@ -1,0 +1,245 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Monkey Kombat Coach</title>
+	
+	<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-icon-180x180.png">
+	<link rel="icon" type="image/png" sizes="192x192"  href="icons/android-icon-192x192.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="96x96" href="icons/favicon-96x96.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+	<link rel="manifest" href="icons/manifest.json">
+	<meta name="msapplication-TileColor" content="#ffffff">
+	<meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png">
+	<meta name="theme-color" content="#ffffff">
+	
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+	integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+	integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+	
+	<style>
+		body
+		{
+			text-align: center;
+		}
+		
+		.grid-header
+		{
+			font-weight: bold;
+			padding: 5px;
+		}
+		
+		.grid-cell
+		{
+			padding: 5px;
+			background-color: #CCC;
+			border: 1px solid black;
+		}
+		
+		.grid-cell.wins { background-color: #9C9; }
+		.grid-cell.loses { background-color: #C99; }
+		
+		.invalid
+		{
+			background-color: black;
+		}
+		
+		#research-pane div
+		{
+			padding-bottom: 10px;
+		}
+	</style>
+</head>
+<body>
+	<div class="content">
+		<h2>Monkey Kombat Coach</h2>
+		<div id="research-pane">
+			<div>
+				<span class="stance-name atk-name"></span> 
+				<select id="stance-wins">
+					<option value="0">???</option>
+					<option value="1">beats</option>
+					<option value="-1">loses to</option>
+				</select> 
+				<span class="stance-name def-name"></span>
+			</div>
+			<div>
+				<input type="text" size="5" id="transition" disabled> 
+				<button class="add-transition">A</button> 
+				<button class="add-transition">C</button> 
+				<button class="add-transition">O</button> 
+				<button class="add-transition">E</button> 
+				<button id="clear-transition">clear</button> 
+			</div>
+			<div>
+				<strong>Suggestions: </strong>
+				<span id="suggestions"></span>
+			</div>
+		</div>
+		<div id="table-container"></div>
+	</div>
+	
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+	integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	
+	<script>
+		var STANCE = ['AA', 'BB', 'CC', 'GG', 'DM'];
+		var STANCE_LONG = ['Anxious Ape', 'Bobbing Baboon', 'Charging Chimp', 'Gimpy Gibbeon', 'Drunken Monkey'];
+		
+		var activecell = null;
+		var transition = [];
+		var wins = [];
+		
+		function expandResearch(atk, def)
+		{
+			return function(e)
+			{
+				activecell = [atk, def];
+				$('.atk-name').text(STANCE_LONG[atk]);
+				$('.def-name').text(STANCE_LONG[def]);
+				
+				$('#stance-wins').val(wins[atk][def]);
+				$('#transition').val(transition[atk][def]);
+				suggest(atk, def);
+			}
+		}
+		
+		function suggest(them, you)
+		{
+			var goodstance = [];
+			for (var i = 0; i < 5; ++i)
+			{
+				var trans = transition[you][i];
+				if (!trans) continue;
+				
+				if (wins[them][i] == -1)
+					goodstance.push(trans + ' (win)');
+				else if (wins[them][i] == 0 && them != i)
+					goodstance.push(trans + ' (info)');
+			}
+					
+			if (goodstance.length == 0 && transition[you][them])
+				goodstance.push(transition[you][them] + ' (heal)');
+			$('#suggestions').text(goodstance.join(', '));
+		}
+		
+		function updateCells()
+		{
+			var x;
+			for (var i = 0; i < 5; ++i)
+			{
+				// check to fill in loses
+				x = 0;
+				for (var j = 0; j < 5; ++j)
+				{
+					if (i == j) continue;
+					if (wins[i][j] > 0) ++x;
+				}
+				
+				if (x == 2)
+					for (var j = 0; j < 5; ++j)
+						if (wins[i][j] == 0 && i != j)
+						{
+							wins[i][j] = -1;
+							wins[j][i] = 1;
+						}
+				
+				// check to fill in wins
+				x = 0;
+				for (var j = 0; j < 5; ++j)
+				{
+					if (i == j) continue;
+					if (wins[i][j] < 0) ++x;
+				}
+				
+				if (x == 2)
+					for (var j = 0; j < 5; ++j)
+						if (wins[i][j] == 0 && i != j)
+						{
+							wins[i][j] = 1;
+							wins[j][i] = -1;
+						}
+			}
+		
+			for (var i = 0; i < 5; ++i)
+			for (var j = 0; j < 5; ++j)
+			{
+				$('.cell-' + j + '-' + i).toggleClass('wins', wins[i][j] > 0);
+				$('.cell-' + j + '-' + i).toggleClass('loses', wins[i][j] < 0);
+				$('.cell-' + j + '-' + i).text(transition[i][j]);
+			}
+			
+			// update suggestions live
+			if (activecell) suggest(activecell[0], activecell[1]);
+		}
+		
+		$('#stance-wins').change(function(e)
+		{
+			if (!activecell) return;
+			var atk = activecell[0];
+			var def = activecell[1];
+			
+			wins[atk][def] = +$(this).val();
+			wins[def][atk] = -wins[atk][def];
+			updateCells();
+		});
+		
+		$('#transition').change(function(e)
+		{
+			if (!activecell) return;
+			var a = activecell[0];
+			var b = activecell[1];
+			
+			transition[b][a] = transition[a][b] = $(this).val();
+			updateCells();
+		});
+		
+		$('.add-transition').click(function(e)
+		{
+			var prev = $('#transition').val();
+			var newletter = $(this).text();
+			if (prev.length >= 3 || prev.indexOf(newletter) != -1) return;
+			
+			$('#transition').val(prev + newletter);
+			$('#transition').change();
+		});
+		
+		$('#clear-transition').click(function(e)
+		{
+			$('#transition').val('').change();
+		});
+		
+		var table = $('<table>').appendTo('#table-container');
+		var row = $('<tr>').appendTo(table);
+		
+		$('<td>').appendTo(row);
+		for (var i = 0; i < 5; ++i)
+			$('<td>').addClass('grid-header').text(STANCE[i]).appendTo(row);
+			
+		var sz = Math.min(100, (window.innerWidth - 50) / 5);
+		for (var i = 0; i < 5; ++i)
+		{
+			transition.push(['','','','','']);
+			wins.push([0,0,0,0,0]);
+		
+			row = $('<tr>').appendTo(table);
+			$('<td>').addClass('grid-header').text(STANCE[i]).appendTo(row);
+			for (var j = 0; j < 5; ++j)
+			{
+				var cell = $('<td>').addClass('grid-cell').width(sz).height(sz).appendTo(row);
+				cell.addClass('cell-' + i + '-' + j);
+				
+				if (i == j) cell.addClass('invalid');
+				else cell.click(expandResearch(j, i));
+			}
+		}
+		
+		expandResearch(0, 1)();
+	</script>
+</body>
+</html>
