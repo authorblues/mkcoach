@@ -117,8 +117,17 @@
 				var trans = transition[you][i];
 				if (!trans) continue;
 				
-				if (wins[them][i] == -1)
-					goodstance.push(trans + ' (win)');
+				if (wins[them][i] == -1) 
+				{
+					var star = false;
+					for (var j = 0; j < 5; ++j)
+						star = star || (!transition[them][j] && wins[j][i] != -1);
+						
+					// (win**) implies there is transition info to be potentially gained
+					// from selecting this transition -- encourage AI to transition to give 
+					// up info
+					goodstance.push(trans + ' (win' + (star ? '**' : '') + ')');
+				}
 				else if (wins[them][i] == 0 && them != i)
 					goodstance.push(trans + ' (info)');
 			}
